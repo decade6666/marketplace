@@ -1,11 +1,11 @@
 ---
 name: mem-recall
-description: Search and recall past AI conversations across Claude Code, Codex, and OpenCode sessions via the `trellis mem` CLI. Use whenever the user asks to remember, find, or look up anything discussed in previous AI sessions — across platforms, projects, or time. Triggers on phrases like "我之前跟 Claude/Codex 讨论过 X", "上次怎么处理 Y", "翻一下历史对话", "我们当时怎么决定 X 的", "之前讨论过 X 的 trade-off", "为什么我们选了 X 而不是 Y", "find what I said about Z", "what did I discuss last week", "the rationale for choosing X", "find the brainstorm where we picked Z over alternatives". Use even when the user doesn't say "history" or "recall" — any reference to past AI-conversation content should trigger this skill. The tool reads sessions directly from each platform's local storage; nothing is uploaded.
+description: Search and recall past AI conversations across Claude Code and Codex (OpenCode reader temporarily unavailable on 0.6.0-beta.4) via the `trellis mem` CLI. Use whenever the user asks to remember, find, or look up anything discussed in previous AI sessions — across platforms, projects, or time. Triggers on phrases like "我之前跟 Claude/Codex 讨论过 X", "上次怎么处理 Y", "翻一下历史对话", "我们当时怎么决定 X 的", "为什么我们选了 X 而不是 Y", "find what I said about Z", "what did I discuss last week", "the rationale for choosing X", "find the brainstorm where we picked Z over alternatives". Use even when the user doesn't say "history" or "recall" — any reference to past AI-conversation content should trigger this skill. The tool reads sessions directly from each platform's local storage; nothing is uploaded.
 ---
 
 # Mem Recall
 
-Cross-platform conversation memory for Claude Code, Codex CLI, and OpenCode. The `trellis mem` command reads each platform's local session storage, cleans the dialogue (strips system prompts, tool noise, hook injections, compact summaries handled correctly), and exposes a focused 5-command CLI for recall workflows.
+Cross-platform conversation memory for Claude Code and Codex CLI. The `trellis mem` command reads each platform's local session storage, cleans the dialogue (strips system prompts, tool noise, hook injections, compact summaries handled correctly), and exposes a focused 5-command CLI for recall workflows. **OpenCode reader is temporarily unavailable on 0.6.0-beta.4** — `--platform opencode` returns empty results and prints a one-shot stderr warning; will return in a future release with an install-resilient backend.
 
 ## Prerequisite
 
@@ -16,9 +16,13 @@ npm install -g @mindfoldhq/trellis@beta
 trellis --version   # must be 0.6.0-beta.3 or later
 ```
 
-`trellis mem` ships bundled with the CLI; no extra setup. 0.6.0-beta.3 adds
-`--phase brainstorm|implement|all` (see the dedicated section below) and the
-SQLite-backed OpenCode 1.2+ reader.
+`trellis mem` ships bundled with the CLI; no extra setup. 0.6.0-beta.3 added
+`--phase brainstorm|implement|all` (see the dedicated section below).
+
+The OpenCode reader is **temporarily unavailable in 0.6.0-beta.4** (returns
+empty + a one-shot stderr warning). Reverted from 0.6.0-beta.3 due to
+native-dependency install failures on Windows. Will return in a future
+release with an install-resilient backend.
 
 ## When to use this skill
 
@@ -168,7 +172,7 @@ trellis mem extract 4cda3c7f --phase implement
 |----------|------------------------------------|
 | Claude | Native — boundary detection on raw JSONL `tool_use` Bash blocks |
 | Codex | Native — boundary detection on `function_call` (`exec_command`) events |
-| OpenCode | Degraded: returns full dialogue + a stderr warning |
+| OpenCode | Unavailable in 0.6.0-beta.4 — returns empty + warning |
 
 **Edge cases handled gracefully**:
 
@@ -184,7 +188,7 @@ Mostly for browsing/debugging. Project-scoped by default; `--global` to widen.
 trellis mem list --since 2026-04-27
 ```
 
-OpenCode child sessions show `↳ child of <parent-id>` annotation.
+OpenCode child sessions show `↳ child of <parent-id>` annotation (currently no-op — see OpenCode reader status above).
 
 ## Flags reference
 
@@ -215,7 +219,7 @@ The tool reads these locations directly. No daemon, no index, no upload.
 |---|---|---|
 | **Claude Code** | `~/.claude/projects/<sanitized-cwd>/*.jsonl` | One JSONL per session; cwd path encoded in dirname (`/` and `_` → `-`) |
 | **Codex** | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | One JSONL per session; cwd in `session_meta` payload of first event |
-| **OpenCode** (1.2+) | `~/.local/share/opencode/opencode.db` (SQLite) | `session` / `message` / `part` tables. `session.parent_id` links sub-agent sessions. Pre-1.2 JSON tree is no longer supported. |
+| **OpenCode** | Reader temporarily unavailable in 0.6.0-beta.4 | Returns empty + one-shot stderr warning |
 
 ## Cleaning rules (what's stripped from raw data)
 
@@ -234,9 +238,9 @@ This means search hits are reliable signals of "the actual conversation discusse
 |---|---|---|
 | Claude | Same JSONL — main agent's `Agent`/`Task` tool_use logs the prompt; tool_result has the final output. **Sub-agent's internal turns are NOT recorded** | Only prompt + final result |
 | Codex | **New rollout JSONL per `codex exec` spawn**, no `parent_id` field | Treated as independent session |
-| OpenCode | **New session with `session.parent_id`** linking to parent | Use `--include-children` to merge into parent |
+| OpenCode | Reader temporarily unavailable in 0.6.0-beta.4 | n/a until reader returns |
 
-`--include-children` only meaningfully changes behavior for OpenCode searches.
+`--include-children` only meaningfully changes behavior for OpenCode searches (no-op in 0.6.0-beta.4 while OpenCode reader is unavailable).
 
 ## Worked example: "what did I discuss about memory in Trellis last week?"
 
