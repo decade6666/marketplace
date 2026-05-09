@@ -1,6 +1,6 @@
 ---
 name: mem-recall
-description: Search and recall past AI conversations across Claude Code, Codex, and OpenCode sessions via the `trellis mem` CLI. Use whenever the user asks to remember, find, or look up anything they discussed in previous AI sessions — across platforms, projects, or time. Triggers on phrases like "我之前跟 Claude/Codex 讨论过 X", "上次怎么处理 Y", "翻一下历史对话", "之前在 trellis 项目里聊过的方案", "find what I said about Z", "what did I discuss about memory last week", "我之前在哪个项目讨论过 plugin 设计". Use even if the user doesn't explicitly say "history" or "recall" — any reference to past AI conversation content (regardless of which CLI they used) should trigger this skill. The tool reads sessions directly from each platform's local JSONL/JSON storage; nothing is uploaded.
+description: Search and recall past AI conversations across Claude Code, Codex, and OpenCode sessions via the `trellis mem` CLI. Use whenever the user asks to remember, find, or look up anything discussed in previous AI sessions — across platforms, projects, or time. Triggers on phrases like "我之前跟 Claude/Codex 讨论过 X", "上次怎么处理 Y", "翻一下历史对话", "我们当时怎么决定 X 的", "之前讨论过 X 的 trade-off", "为什么我们选了 X 而不是 Y", "find what I said about Z", "what did I discuss last week", "the rationale for choosing X", "find the brainstorm where we picked Z over alternatives". Use even when the user doesn't say "history" or "recall" — any reference to past AI-conversation content should trigger this skill. The tool reads sessions directly from each platform's local storage; nothing is uploaded.
 ---
 
 # Mem Recall
@@ -9,14 +9,16 @@ Cross-platform conversation memory for Claude Code, Codex CLI, and OpenCode. The
 
 ## Prerequisite
 
-Trellis CLI **0.6.0-beta.0 or later** installed globally:
+Trellis CLI **0.6.0-beta.3 or later** installed globally:
 
 ```bash
 npm install -g @mindfoldhq/trellis@beta
-trellis --version   # must be 0.6.0-beta.0 or later
+trellis --version   # must be 0.6.0-beta.3 or later
 ```
 
-`trellis mem` ships bundled with the CLI; no extra setup.
+`trellis mem` ships bundled with the CLI; no extra setup. 0.6.0-beta.3 adds
+`--phase brainstorm|implement|all` (see the dedicated section below) and the
+SQLite-backed OpenCode 1.2+ reader.
 
 ## When to use this skill
 
@@ -28,6 +30,15 @@ Use proactively whenever the user asks any of:
 - "我之前在 trellis 项目里聊过哪些 plugin 设计？"
 - "find sessions about memory architecture"
 - "what did I tell another AI about this last week"
+
+**Design-rationale flavour** (favour `--phase brainstorm` for these — see below):
+
+- "我们当时怎么决定 X 的？"
+- "之前讨论过 X 的 trade-off"
+- "为什么我们选了 X 而不是 Y"
+- "what was the design discussion about Y"
+- "the rationale for choosing X"
+- "find the brainstorm where we picked Z over alternatives"
 
 Don't second-guess. The user's intent of "use my past conversations as context" is what this skill serves. Cross-platform / cross-project recall has no alternative tool — `git log` only sees commits, your own memory has no record of what you said in another CLI.
 
@@ -101,6 +112,70 @@ trellis mem extract 4cda3c7f --grep memory   # filter to turns matching keyword
 trellis mem extract 4cda3c7f --json          # structured output
 ```
 
+### `trellis mem extract --phase brainstorm` — slice the discussion portion
+
+A Trellis session often opens with brainstorming (the user thinking aloud, the
+AI proposing options, alternatives being rejected, decisions being made),
+followed by implementation work once the user runs `task.py start`. The
+`--phase` flag slices the cleaned dialogue along that boundary so you can
+recover the **discussion** without the implementation noise — or vice versa.
+
+**The boundary**: a brainstorm window is everything between
+`task.py create ...` and the matching `task.py start ...` Bash invocation in
+the same session. Multi-task sessions produce multiple windows.
+
+**Three values**:
+
+| `--phase` | What you get |
+|-----------|--------------|
+| `all` (default) | Full cleaned dialogue — same as before this flag existed |
+| `brainstorm` | Only the `[create, start)` windows — discussion / decisions |
+| `implement` | Everything OUTSIDE every brainstorm window — the work itself |
+
+**When to prefer `--phase brainstorm`**: design-rationale questions ("为什么我们当时选了 X", "the trade-off discussion about Y", "what alternatives did we reject") have much higher signal density inside brainstorm windows than across the full session. Drop straight to `extract --phase brainstorm` instead of `context --grep`, which can land you in the middle of the implementation phase where the topic is just being referenced, not decided.
+
+**Examples**:
+
+```bash
+# Single session, brainstorm only
+trellis mem extract 4cda3c7f --phase brainstorm
+
+# Multi-task session — output is split with separators:
+#   --- task: my-feature ---
+#   ## Human ...
+#   --- task: another-task ---
+#   ## Human ...
+trellis mem extract 4cda3c7f --phase brainstorm
+
+# Filter inside the brainstorm window only (--phase runs first, then --grep)
+trellis mem extract 4cda3c7f --phase brainstorm --grep "trade-off"
+
+# Structured output: get window metadata for downstream scripts / AI
+trellis mem extract 4cda3c7f --phase brainstorm --json
+# JSON adds:
+#   "phase": "brainstorm"
+#   "windows": [{ "label": "my-feature", "startTurn": 1, "endTurn": 14 }, ...]
+#   "groups":  [{ "label": "my-feature", "turns": [...] }, ...]
+#   "turns":   [...]   // flat concatenation, legacy-compatible
+
+# The inverse: just the implementation work
+trellis mem extract 4cda3c7f --phase implement
+```
+
+**Platform support**:
+
+| Platform | `--phase brainstorm` / `implement` |
+|----------|------------------------------------|
+| Claude | Native — boundary detection on raw JSONL `tool_use` Bash blocks |
+| Codex | Native — boundary detection on `function_call` (`exec_command`) events |
+| OpenCode | Degraded: returns full dialogue + a stderr warning |
+
+**Edge cases handled gracefully**:
+
+- `create` found but no following `start` (still working on the task) → window stays open through end of session.
+- `start` found but no preceding `create` (task created in an earlier session) → brainstorm window is `[0, start)`.
+- Neither found → full dialogue + stderr warning.
+
 ### `trellis mem list` — enumerate sessions
 
 Mostly for browsing/debugging. Project-scoped by default; `--global` to widen.
@@ -124,6 +199,7 @@ OpenCode child sessions show `↳ child of <parent-id>` annotation.
 --turns N                              context: top-N hit turns (default 3)
 --around N                             context: surrounding turns per hit (default 1)
 --max-chars N                          context: char budget (default 6000)
+--phase brainstorm|implement|all       extract: slice by [task.py create, start) (default all; Claude & Codex)
 --include-children                     search / context: merge OpenCode sub-agent sessions into parent
 --json                                 emit JSON
 --help, -h                             show help
@@ -139,7 +215,7 @@ The tool reads these locations directly. No daemon, no index, no upload.
 |---|---|---|
 | **Claude Code** | `~/.claude/projects/<sanitized-cwd>/*.jsonl` | One JSONL per session; cwd path encoded in dirname (`/` and `_` → `-`) |
 | **Codex** | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | One JSONL per session; cwd in `session_meta` payload of first event |
-| **OpenCode** | `~/.local/share/opencode/storage/{session,message,part}/...` | Three-tier: session info / message metadata / part bodies. `parentID` field on session info for sub-agent chains |
+| **OpenCode** (1.2+) | `~/.local/share/opencode/opencode.db` (SQLite) | `session` / `message` / `part` tables. `session.parent_id` links sub-agent sessions. Pre-1.2 JSON tree is no longer supported. |
 
 ## Cleaning rules (what's stripped from raw data)
 
@@ -158,7 +234,7 @@ This means search hits are reliable signals of "the actual conversation discusse
 |---|---|---|
 | Claude | Same JSONL — main agent's `Agent`/`Task` tool_use logs the prompt; tool_result has the final output. **Sub-agent's internal turns are NOT recorded** | Only prompt + final result |
 | Codex | **New rollout JSONL per `codex exec` spawn**, no `parent_id` field | Treated as independent session |
-| OpenCode | **New session with `parentID` field** linking to parent | Use `--include-children` to merge into parent |
+| OpenCode | **New session with `session.parent_id`** linking to parent | Use `--include-children` to merge into parent |
 
 `--include-children` only meaningfully changes behavior for OpenCode searches.
 
