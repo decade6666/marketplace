@@ -34,6 +34,14 @@
       "tags": ["trellis", "meta", "workflow", "customization"]
     },
     {
+      "id": "trellis-spec-bootstarp",
+      "type": "skill",
+      "name": "Trellis Spec Bootstarp",
+      "description": "Platform-neutral workflow for bootstrapping project-specific Trellis coding specs",
+      "path": "skills/trellis-spec-bootstarp",
+      "tags": ["trellis", "spec", "bootstrap", "codebase-analysis"]
+    },
+    {
       "id": "frontend-fullchain-optimization",
       "type": "skill",
       "name": "Frontend Full-Chain Optimization",
