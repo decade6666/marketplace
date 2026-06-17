@@ -104,7 +104,7 @@ Complex task: ask the user if you can create a Trellis task and enter the planni
 - 1.0 Create task `[required · once]`
 - 1.1 Requirement exploration `[required · repeatable]`
 - 1.2 Research `[optional · repeatable]`
-- 1.3 Configure context `[conditional · once]`
+- 1.3 Configure context `[required · once]`  (sub-agent-dispatch platforms only)
 - 1.4 Activate task `[required · once]`
 - 1.5 Completion criteria
 
@@ -144,11 +144,12 @@ Read context before editing: `prd.md` -> `design.md if present` -> `implement.md
 
 ### Phase 3: Finish
 
-- 3.1 Quality verification `[required · repeatable]`
 - 3.2 Debug retrospective `[on demand]`
 - 3.3 Spec update `[required · once]`
 - 3.4 Commit changes `[required · once]`
 - 3.5 Wrap-up reminder
+
+> Note: step 3.1 was folded into 2.2 (last-iteration full-scope check) and 3.4 (commit preamble). Numbering kept stable to avoid breaking external references.
 
 [workflow-state:completed]
 Code committed. Run `/trellis:finish-work`; if dirty, return to Phase 3.4 first.
@@ -216,7 +217,7 @@ Requirements:
 
 When research is needed, write results to `{TASK_DIR}/research/`. Research files must be usable by later workers.
 
-#### 1.3 Configure context `[conditional · once]`
+#### 1.3 Configure context `[required · once]`
 
 Curate worker context manifests:
 
@@ -344,15 +345,6 @@ Load `trellis-check` or use a channel-driven check worker. If issues are found, 
 
 Goal: verify quality, capture lessons, and commit the work.
 
-#### 3.1 Quality verification `[required · repeatable]`
-
-Load `trellis-check` or dispatch a channel-driven check worker for final verification:
-
-- spec compliance
-- lint / type-check / tests
-- cross-layer consistency
-- task artifact alignment
-
 #### 3.2 Debug retrospective `[on demand]`
 
 If the same class of issue recurred, load `trellis-break-loop` and record root cause plus prevention.
@@ -362,6 +354,8 @@ If the same class of issue recurred, load `trellis-break-loop` and record root c
 Load `trellis-update-spec` and decide whether new patterns, pitfalls, or technical decisions should be written back to `.trellis/spec/`.
 
 #### 3.4 Commit changes `[required · once]`
+
+**Spec-sync preamble**: before drafting commits, ask: did this task fix a bug or surface non-obvious knowledge that should land in `.trellis/spec/` so future-you (or future-AI) doesn't repeat the mistake? If yes, return to Phase 3.3 first — spec writes belong in the same task's commit batch, not as a forgotten follow-up.
 
 The main session commits work changes. Before committing, separate AI-edited files from unknown dirty files.
 
