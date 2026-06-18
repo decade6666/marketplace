@@ -177,13 +177,13 @@ Code committed. Run `/trellis:finish-work`; if dirty, return to Phase 3.4 first.
 
 [/Claude Code, Cursor, OpenCode, codex-sub-agent, Kiro, Gemini, Qoder, CodeBuddy, Copilot, Droid, Pi]
 
-[codex-inline, Kilo, Antigravity, Windsurf]
+[codex-inline, Kilo, Antigravity, Devin]
 
 - Planning or unclear requirements -> `trellis-brainstorm`.
 - Before editing -> `trellis-before-dev`; after editing -> prefer a channel-driven `check` worker.
 - Repeated debugging -> `trellis-break-loop`; spec updates -> `trellis-update-spec`.
 
-[/codex-inline, Kilo, Antigravity, Windsurf]
+[/codex-inline, Kilo, Antigravity, Devin]
 
 ---
 
@@ -280,7 +280,7 @@ Native sub-agent fallback is allowed only when the user explicitly asks for it o
 
 [/Claude Code, Cursor, OpenCode, codex-sub-agent, Kiro, Gemini, Qoder, CodeBuddy, Copilot, Droid, Pi]
 
-[codex-inline, Kilo, Antigravity, Windsurf]
+[codex-inline, Kilo, Antigravity, Devin]
 
 1. Load `trellis-before-dev`.
 2. Read `prd.md`, then `design.md` if present, then `implement.md` if present.
@@ -288,7 +288,7 @@ Native sub-agent fallback is allowed only when the user explicitly asks for it o
 4. Small changes may be implemented inline; larger changes should still use a channel worker.
 5. After implementation, enter channel-driven check.
 
-[/codex-inline, Kilo, Antigravity, Windsurf]
+[/codex-inline, Kilo, Antigravity, Devin]
 
 #### 2.2 Quality check `[required · repeatable]`
 
@@ -327,11 +327,11 @@ Check workers should directly fix clear issues. The main session reads raw event
 
 [/Claude Code, Cursor, OpenCode, codex-sub-agent, Kiro, Gemini, Qoder, CodeBuddy, Copilot, Droid, Pi]
 
-[codex-inline, Kilo, Antigravity, Windsurf]
+[codex-inline, Kilo, Antigravity, Devin]
 
 Load `trellis-check` or use a channel-driven check worker. If issues are found, fix and re-check until green.
 
-[/codex-inline, Kilo, Antigravity, Windsurf]
+[/codex-inline, Kilo, Antigravity, Devin]
 
 #### 2.3 Rollback `[on demand]`
 
