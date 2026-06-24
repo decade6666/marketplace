@@ -243,7 +243,9 @@ python3 ./.trellis/scripts/task.py start <task-dir>
 | `task.py start` has run | yes |
 | `design.md` exists for complex tasks | yes |
 | `implement.md` exists for complex tasks | yes |
-| `implement.jsonl` / `check.jsonl` curated when needed | recommended |
+| `implement.jsonl` and `check.jsonl` each contain at least one real curated entry (seed row does not count) | yes |
+
+Runtime consumers tolerate missing or seed-only manifests for compatibility, but that tolerance is not a planning-ready state.
 
 ---
 
